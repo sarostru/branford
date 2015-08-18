@@ -181,8 +181,7 @@ dispatch_table = {
 }
 
 function eval1(e, env) 
-	local t, val
-	dispatch_key, expression = unpack(e)
+	local dispatch_key, expression = unpack(e)
 	return dispatch_table[dispatch_key](expression, env)
 end
 
