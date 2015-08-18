@@ -166,23 +166,80 @@ small integer language
 -- from Taha
 env0 = function () error("Yikes!") end
 function extend(env, x, v)
-	return function (y) if x == y then return v else return env(y) end 
+	return function (y) if x == y then return v else return env(y) end end
 end
 
 --[[I don't have types like in ocaml, so what to do, I guess prepend things with
 a type tag that indexes into a table of things to do ]]--
-int = "type:int"
-var = "type:var"
+--int = "type:int"
+--var = "type:var"
 
 
-dispatch_table = {
-	[int] = function (x, env) return x end
-	[var] = function (x, env) return env(x) end
-}
+-- local dispatch_table = {
+	-- int = function (x, env) return x end,
+	-- var = function (x, env) return env(x) end
+-- }
 
-function eval1(e, env) 
-	local dispatch_key, expression = unpack(e)
-	return dispatch_table[dispatch_key](expression, env)
+-- function eval1(e, env) 
+	-- local dispatch_key, expression = unpack(e)
+	-- return dispatch_table[dispatch_key](expression, env)
+-- end
+
+function prompt()
+	io.write("@>") 
 end
 
--- Parsing
+function make_state_machine()
+	local state_transitions = {}
+	local function method_1_func() return true end
+	local methods_table {
+		method_1 = method_1_func
+	}
+	return methods_table
+end
+
+-- Damn even simplified lua syntax is sort've long
+function tokenize(e)
+-- match against
+-- function
+-- (
+-- )
+-- symbol
+-- = -> assignment
+-- operators +, -, /, *
+-- if, then, else
+-- return 
+-- end
+-- 
+end
+
+-- Cheating and using lua's own, damn then I can't get at the AST :( 
+function parse_expression(e)
+	local parsed_exp, msg = loadstring(e)
+	return parsed_exp
+end
+
+function unpack_expression(f)
+	
+end
+
+function read_exp(e)
+	local l = io.read('*l')
+	local new_exp = e .. l
+	local parsed_exp = parse_expression(new_exp)
+	if parsed_exp then return parsed_exp end
+	read_exp(new_exp)
+end
+
+function driver_loop()
+	prompt()
+	local e = read_exp("")
+	if e == "print('exit')" then return end
+	driver_loop()
+end
+
+function driver()
+	
+end
+
+driver_loop()
