@@ -155,4 +155,35 @@ terra_pow5:printpretty()
 print("Printing the dissassembly")
 terra_pow5:disas()
 
--- wow, that is awesome!
+-- neat, that is awesome!
+
+--[[
+Next up I want an interpreter, so lets do it in lua first, in Taha they use a 
+small integer language
+]]--
+
+-- Putting the environment in lua using the explicit function implementation 
+-- from Taha
+env0 = function () error("Yikes!") end
+function extend(env, x, v)
+	return function (y) if x == y then return v else return env(y) end 
+end
+
+--[[I don't have types like in ocaml, so what to do, I guess prepend things with
+a type tag that indexes into a table of things to do ]]--
+int = "type:int"
+var = "type:var"
+
+
+dispatch_table = {
+	[int] = function (x, env) return x end
+	[var] = function (x, env) return env(x) end
+}
+
+function eval1(e, env) 
+	local t, val
+	dispatch_key, expression = unpack(e)
+	return dispatch_table[dispatch_key](expression, env)
+end
+
+-- Parsing
