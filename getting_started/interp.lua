@@ -165,7 +165,7 @@ function read_exp(e)
 	local l = io.read('*l')
 	local new_exp = e .. l
 	if iscomplete(new_exp) then return new_exp end
-	read_exp(new_exp)
+	return read_exp(new_exp)
 end
 
 function driver_loop(env)
@@ -177,7 +177,7 @@ function driver_loop(env)
 	local val = result[1]
 	local env = result[2]
 	print("val: ", val)
-	driver_loop(env)
+	return driver_loop(env)
 end
 local env = env0
 env = extend(env, "+", function (args) return args[1] + args[2] end)

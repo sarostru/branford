@@ -55,3 +55,22 @@ print("Printing the dissassembly")
 terra_pow5:disas()
 
 -- neat, that is awesome!
+
+-- let's see what it does with a plain loop
+terra terra_loop5 (x: int)
+  var y: int = x
+  for i=1, 5 do
+    y = y * x
+  end
+  return y
+end
+
+-- I can parameterize on the type
+function make_power_func(value_type, n)
+	local terra f (x : value_type)
+		return [pow(n, x)]
+	end
+	return f
+end
+terra_power8 = make_power_func(double, 8)
+
