@@ -1,6 +1,15 @@
 -- Examples copied from the getting started page
 -- http://terralang.org/getting-started.html
 
+terra myfn()
+    var a = 3.0 --a will have type double
+end
+
+terra myfn()
+    var a : int, b : double = 3, 4.5
+    var c : double, d       = 3, 4.5
+end
+
 C = terralib.includec("stdlib.h")
 terra doit()
     var a = [&int](C.malloc(sizeof(int) * 2))
