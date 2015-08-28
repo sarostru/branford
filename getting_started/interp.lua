@@ -38,43 +38,9 @@ function retrieve(env, x)
 	return env[x]
 end
 
---[[I don't have types like in ocaml, so what to do, I guess prepend things with
-a type tag that indexes into a table of things to do ]]--
---int = "type:int"
---var = "type:var"
-
-
--- local dispatch_table = {
-	-- int = function (x, env) return x end,
-	-- var = function (x, env) return env(x) end
--- }
-
--- function eval1(e, env) 
-	-- local dispatch_key, expression = unpack(e)
-	-- return dispatch_table[dispatch_key](expression, env)
--- end
-
 function prompt()
 	io.write("@>") 
 end
-
--- A chunk:
---  assignment: x = 3
---  
--- function make_state_machine()
-	-- local keywords = {"function", "return", "end", "if", "else", "then"}
-	-- local symbols = {}
-	-- states["function"] = make_transition_function()
-	-- states[""]
-	
-	-- local state_transitions = {}
-	-- local function method_1_func() return true end
-	-- local methods_table {
-		-- method_1 = method_1_func
-	-- }
-	-- return methods_table
--- end
-
 
 -- Going with scheme syntax
 function tokenize(s)
