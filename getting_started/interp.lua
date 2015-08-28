@@ -87,28 +87,30 @@ end
 
 op_table = {}
 op_table["define"] = 
-	function(L, env) 
-		local value = eval(L[4], env)
-		local env = extend(env, L[3][2], value[1])
+	function(e, env) 
+		local name, expr = unpack(e)
+		local value = eval(expr, env)
+		local env = extend(env, name[2], value[1])
 		return {"defined", env}
 	end
 op_table["if"] = 
-	function(L, env)
-		local result = eval(L[3], env)
+	function(e, env)
+		local pred, t_expr, f_expr = unpack(e)
+		local result = eval(pred, env)
 		-- False is zero, can env be changed in evaluating the if? hmm
-		if result[1] ~= 0 then return eval(L[4], env)
-		else return eval(L[5], env)
+		if result[1] ~= 0 then return eval(t_expr, env)
+		else return eval(f_expr, env)
 		end
 	end
 op_table["lambda"] = 
-	function(L, env)
+	function(e, env)
+		local args, body = unpack(e)
 		local parms = {}
 		local j = 2
-		while L[3][j] ~= nil do
-			parms[j-1] = L[3][j][2]
+		while args[j] ~= nil do
+			parms[j-1] = args[j][2]
 			j = j + 1
 		end
-		local body = L[4]
 		local fenv  = branch(env)
 		local lambda = function (args) 
 							local i = 1
@@ -119,16 +121,16 @@ op_table["lambda"] =
 							local result = eval(body, fenv)
 							return result[1]
 						end
+		print("defined lambda: ", lambda)
 		return {lambda, env}
 	end
 op_table["apply"] = 
-	function(L, env) 
-		local lambda = eval(L[2], env)
+	function(fname, params, env) 
+		local lambda = eval(fname, env)
 		local args = {}
 		local i = 1
-		-- Arguments start at L[3] so i + 2
-		while L[i+2] ~= nil do
-			local result = eval(L[i+2], env)
+		while params[i] ~= nil do
+			local result = eval(params[i], env)
 			args[i] = result[1]
 			i = i + 1
 		end
@@ -136,19 +138,35 @@ op_table["apply"] =
 	end
 
 dispatch_table = {}
-dispatch_table["number"] = function(L, env) return {L[2], env} end
-dispatch_table["symbol"] = function(L, env) return {retrieve(env, L[2]), env} end
+dispatch_table["number"] = 
+	function(L, env) 
+		local x = table.remove(L, 1) 
+		return {x, env} 
+	end
+dispatch_table["symbol"] = 
+	function(L, env) 
+		local name = table.remove(L, 1)
+		return {retrieve(env, name), env} 
+	end
 dispatch_table["list"] = 
 	function(L, env)
-		if op_table[L[2][2]] ~= nil then
-			return op_table[L[2][2]](L, env)
+		local op = table.remove(L, 1)
+		local op_name = op[2]
+		if op_table[op_name] ~= nil then
+			return op_table[op_name](L, env)
 		else
-			return op_table["apply"](L, env)
+			return op_table["apply"](op, L, env)
 		end
 	end
 
-function eval(e, env)
-	return dispatch_table[e[1]](e, env)
+function eval(expr, env)
+	-- Shallow copying the expression, since I have made eval destructive on
+	-- expr by using the table.remove approach.  Not sure if that was a good 
+	-- idea.
+	local e = {}
+	for k, v in pairs(expr) do e[k] = v end
+	local dispatch_code = table.remove(e, 1)
+	return dispatch_table[dispatch_code](e, env)
 end
 
 
