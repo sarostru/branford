@@ -85,68 +85,72 @@ function make_tree(tokens)
 	end
 end
 
-
-
-
-function eval(e, env)
-	local dispatch_table = {}
-	dispatch_table["number"] = function(L) print("number: ", L[2]) return {L[2], env} end
-	dispatch_table["symbol"] = function(L) print("symbol: ", L[2]) return {retrieve(env, L[2]), env} end
-	dispatch_table["list"] = function(L)
-		local op_table = {}
-		op_table["define"] = function(L) print("define: ", L[3][2], L[4][2]) 
-								local value = eval(L[4], env)
-								local env = extend(env, L[3][2], value[1])
-								return {"defined", env}
-							end
-		op_table["if"] = function(L) print("if")
-							local result = eval(L[3], env)
-							-- False is zero, can env be changed in evaluating the if? hmm
-							if result[1] ~= 0 then return eval(L[4], env)
-							else return eval(L[5], env)
-							end
-						end
-		op_table["lambda"] = function(L)
-								local parms = {}
-								local j = 2
-								while L[3][j] ~= nil do
-									parms[j-1] = L[3][j][2]
-									j = j + 1
-								end
-								local body = L[4]
-								local fenv  = branch(env)
-								local lambda = function (args) 
-													local i = 1
-													while parms[i] ~= nil do
-														fenv = extend(fenv, parms[i], args[i])
-														i = i + 1
-													end
-													local result = eval(body, fenv)
-													return result[1]
-												end
-								return {lambda, env}
-							end
-		op_table["apply"] = function(L) 
-								local lambda = eval(L[2], env)
-								local args = {}
-								local i = 1
-								-- Arguments start at L[3] so i + 2
-								while L[i+2] ~= nil do
-									local result = eval(L[i+2], env)
-									args[i] = result[1]
-									i = i + 1
-								end
-								return {lambda[1](args), env}
-							end
-						
-		if op_table[L[2][2]] ~= nil then
-			return op_table[L[2][2]](L)
-		else
-			return op_table["apply"](L)
+op_table = {}
+op_table["define"] = 
+	function(L, env) 
+		local value = eval(L[4], env)
+		local env = extend(env, L[3][2], value[1])
+		return {"defined", env}
+	end
+op_table["if"] = 
+	function(L, env)
+		local result = eval(L[3], env)
+		-- False is zero, can env be changed in evaluating the if? hmm
+		if result[1] ~= 0 then return eval(L[4], env)
+		else return eval(L[5], env)
 		end
 	end
-	return dispatch_table[e[1]](e)
+op_table["lambda"] = 
+	function(L, env)
+		local parms = {}
+		local j = 2
+		while L[3][j] ~= nil do
+			parms[j-1] = L[3][j][2]
+			j = j + 1
+		end
+		local body = L[4]
+		local fenv  = branch(env)
+		local lambda = function (args) 
+							local i = 1
+							while parms[i] ~= nil do
+								fenv = extend(fenv, parms[i], args[i])
+								i = i + 1
+							end
+							local result = eval(body, fenv)
+							return result[1]
+						end
+		return {lambda, env}
+	end
+op_table["apply"] = 
+	function(L, env) 
+		local lambda = eval(L[2], env)
+		local args = {}
+		local i = 1
+		-- Arguments start at L[3] so i + 2
+		while L[i+2] ~= nil do
+			local result = eval(L[i+2], env)
+			args[i] = result[1]
+			i = i + 1
+		end
+		return {lambda[1](args), env}
+	end
+
+dispatch_table = {}
+dispatch_table["number"] = function(L, env) return {L[2], env} end
+dispatch_table["symbol"] = function(L, env) return {retrieve(env, L[2]), env} end
+dispatch_table["list"] = 
+	function(L, env)
+		if op_table[L[2][2]] ~= nil then
+			return op_table[L[2][2]](L, env)
+		else
+			return op_table["apply"](L, env)
+		end
+	end
+
+function eval(e, env)
+	return dispatch_table[e[1]](e, env)
 end
+
 
 function iscomplete(e)
 	-- Welp this is terrible...
