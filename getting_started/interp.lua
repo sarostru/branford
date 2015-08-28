@@ -5,9 +5,37 @@ small integer language
 
 -- Putting the environment in lua using the explicit function implementation 
 -- from Taha
-env0 = function () error("Yikes!") end
+-- env0 = function () error("Yikes!") end
+-- function extend(env, x, v)
+-- 	return function (y) if x == y then return v else return env(y) end end
+-- end
+-- env0 = function () error("Yikes!") end
+
+--[[
+  In order to support recursive functions, I have moved to a recursive
+  table based environment.
+  This is interesting, the stricter Taha one means you must use a 'let' plus
+  a 'let rec' to define your recursive functions as otherwise you can't update
+  the environment after a function has been defined to include the function 
+  itself.
+]]--
+env_key = 0
+function branch(env)
+	local new_env = {}
+	new_env[env_key] = env
+	return new_env
+end
+
 function extend(env, x, v)
-	return function (y) if x == y then return v else return env(y) end end
+	env[x] = v
+	return env
+end
+
+function retrieve(env, x)
+	if env == nil then error("Yikes!") end
+	local v = env[x]
+	if v == nil then return retrieve(env[env_key], x) end
+	return env[x]
 end
 
 --[[I don't have types like in ocaml, so what to do, I guess prepend things with
@@ -97,7 +125,7 @@ end
 function eval(e, env)
 	local dispatch_table = {}
 	dispatch_table["number"] = function(L) print("number: ", L[2]) return {L[2], env} end
-	dispatch_table["symbol"] = function(L) print("symbol: ", L[2]) return {env(L[2]), env} end
+	dispatch_table["symbol"] = function(L) print("symbol: ", L[2]) return {retrieve(env, L[2]), env} end
 	dispatch_table["list"] = function(L)
 		local op_table = {}
 		op_table["define"] = function(L) print("define: ", L[3][2], L[4][2]) 
@@ -120,7 +148,7 @@ function eval(e, env)
 									j = j + 1
 								end
 								local body = L[4]
-								local fenv  = env
+								local fenv  = branch(env)
 								local lambda = function (args) 
 													local i = 1
 													while parms[i] ~= nil do
@@ -158,7 +186,7 @@ function iscomplete(e)
 	-- Welp this is terrible...
 	local _, nl = string.gsub(e, "%(", "(")
 	local _, nr = string.gsub(e, "%)", ")")
-	return nl == nr
+	return nl <= nr
 end
 
 function read_exp(e)
@@ -179,11 +207,11 @@ function driver_loop(env)
 	print("val: ", val)
 	return driver_loop(env)
 end
-local env = env0
+-- local env = env0
+local env = {}
 env = extend(env, "+", function (args) return args[1] + args[2] end)
+env = extend(env, "-", function (args) return args[1] - args[2] end)
 env = extend(env, "*", function (args) return args[1] * args[2] end)
+env = extend(env, "=", function (args) if args[1] == args[2] then return 1 else return 0 end end)
 env = extend(env, "<", function (args) if args[1] < args[2] then return 1 else return 0 end end)
 driver_loop(env)
--- A few things work now, but recursive functions are broken.
--- I think I finally understand better why there is a a letrec primitive for
--- defining recursive functions
