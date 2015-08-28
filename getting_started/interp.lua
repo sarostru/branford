@@ -112,16 +112,16 @@ op_table["lambda"] =
 			j = j + 1
 		end
 		local fenv  = branch(env)
-		local lambda = function (args) 
-							local i = 1
-							while parms[i] ~= nil do
-								fenv = extend(fenv, parms[i], args[i])
-								i = i + 1
-							end
-							local result = eval(body, fenv)
-							return result[1]
-						end
-		print("defined lambda: ", lambda)
+		local lambda = 
+			function (args) 
+				local i = 1
+				while parms[i] ~= nil do
+					fenv = extend(fenv, parms[i], args[i])
+					i = i + 1
+				end
+				local result = eval(body, fenv)
+				return result[1]
+			end
 		return {lambda, env}
 	end
 op_table["apply"] = 
