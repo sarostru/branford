@@ -55,6 +55,8 @@ function tokenize(s)
 end
 
 function atom(e)
+	if e == "true" then return {"boolean", true} end
+	if e == "false" then return {"boolean", false} end
 	local n = tonumber(e)
 	if not n then return {"symbol", e}
 	else return {"number", n} end
@@ -97,8 +99,7 @@ op_table["if"] =
 	function(e, env)
 		local pred, t_expr, f_expr = unpack(e)
 		local result = eval(pred, env)
-		-- False is zero, can env be changed in evaluating the if? hmm
-		if result[1] ~= 0 then return eval(t_expr, env)
+		if result[1] then return eval(t_expr, env)
 		else return eval(f_expr, env)
 		end
 	end
@@ -138,6 +139,11 @@ op_table["apply"] =
 	end
 
 dispatch_table = {}
+dispatch_table["boolean"] = 
+	function(L, env) 
+		local b = table.remove(L, 1) 
+		return {b, env} 
+	end
 dispatch_table["number"] = 
 	function(L, env) 
 		local x = table.remove(L, 1) 
@@ -171,7 +177,7 @@ end
 
 
 function iscomplete(e)
-	-- Welp this is terrible...
+	-- Very simple paren counting to allow multi-line expressions
 	local _, nl = string.gsub(e, "%(", "(")
 	local _, nr = string.gsub(e, "%)", ")")
 	return nl <= nr
@@ -200,6 +206,6 @@ local env = {}
 env = extend(env, "+", function (args) return args[1] + args[2] end)
 env = extend(env, "-", function (args) return args[1] - args[2] end)
 env = extend(env, "*", function (args) return args[1] * args[2] end)
-env = extend(env, "=", function (args) if args[1] == args[2] then return 1 else return 0 end end)
-env = extend(env, "<", function (args) if args[1] < args[2] then return 1 else return 0 end end)
+env = extend(env, "=", function (args) return args[1] == args[2] end)
+env = extend(env, "<", function (args) return args[1] < args[2] end)
 driver_loop(env)
