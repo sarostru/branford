@@ -7,6 +7,21 @@ Unfortunately, I think how I tried to do it here may not quite make sense.
 I was trying to keep the lambdas as lua functions, but I think maybe they
 need to be terra functions.
 Although you can't nest terra function definitions so not sure.
+
+Yeah, ok so the big problem I am hitting is that I can't define recursive 
+functions and its a fairly fundamental problem.
+Currently in the if statement, the if is quoted to splice into terra code, 
+however that means any recursive calls can only terminate in terra land.  
+This is a problem since the true and false paths of the if statement are being
+evaluated in lua land.  So there is no way for that to terminate.
+
+So I could make lambda's define terra functions instead, but then you can't define
+new terra functions recursively.  May also need some modifications so at lua eval
+time we don't try to call the terra function.
+
+So what to do then?  This is making me think that a staged interpreter is just not
+going to work in the single unified way like in metaocaml.
+
 ]]--
 
 
@@ -136,8 +151,8 @@ op_table["lambda"] =
 					fenv = extend(fenv, parms[i], args[i])
 					i = i + 1
 				end
-				local result = eval(body, fenv)
-				return result[1]
+				local result = `[eval(body, fenv)[1]]
+				return result
 			end
 		return {lambda, env}
 	end
@@ -216,7 +231,7 @@ function driver_loop(env)
 	local env = result[2]
 	print("val: ", val)
 	val:printpretty()
-	local fn = terra () return val end
+	local fn = terra () return [val] end
 	print("val: ", fn())
 	fn:printpretty()
 	fn:disas()
