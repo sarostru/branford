@@ -103,9 +103,7 @@ Sphere.intersection_point = function(sphere, ray)
     --  B = 2(ux + a + uy + b + uz + c)
     --  C = a^2 + b^2 + c^2 - r^2
     -- t = (-B +- sqrt(B^2 - 4AC))/(2A)
-    local O = Vector.make(ray.p.x - sphere.center.x,
-                          ray.p.y - sphere.center.y,
-                          ray.p.z - sphere.center.z)
+    local O = Vector.sub(ray.p - sphere.center)
     local A = Vector.magnitude(ray.u) 
     local B = 2 * Vector.add(ray.u + O)
     local C = Vector.magnitude(O) + sphere.radius * sphere.radius
@@ -117,7 +115,7 @@ Sphere.intersection_point = function(sphere, ray)
     else
         -- the minus path is always less
         local t = (-B - sqrt(M)) / (2 * A)
-        return {hits = 2, point = Ray.at(ray, tm)}
+        return {hits = 2, point = Ray.at(ray, t)}
     end
     return point
 end
