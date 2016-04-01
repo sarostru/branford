@@ -55,6 +55,9 @@ Vector.sub = function(v, w)
     -- TODO:: Abuse of structural typing here, letting points and vecs add in the same way 
     return Vector.make(v.x - w.x, v.y - w.y, v.z - w.z)
 end
+Vector.dot = function(v, w)
+    return Vector.sum(Vector.mul(v, w))
+end
 -- A Ray
 local Ray = {}
 Ray.make = function(p, v) 
@@ -108,6 +111,7 @@ Color.at = function(color, x, y)
     return color
 end
 local yellow = Color.make(255, 255, 0)
+local white = Color.make(255, 255, 255)
 
 -- Sphere
 -- TODO:: Use the polymorphic syntax on objects
@@ -128,29 +132,24 @@ Sphere.intersection_point = function(sphere, ray)
     --  C = a^2 + b^2 + c^2 - r^2
     -- t = (-B +- sqrt(B^2 - 4AC))/(2A)
     local O = Vector.sub(ray.p, sphere.center)
-    if ray.p.x == 0 and ray.p.y == 0 then
-        print({sphere = sphere, ray = ray, O = O})
-    end
     local A = Vector.magnitude(ray.u) 
     local B = 2 * Vector.sum(Vector.mul(ray.u, O))
     local C = Vector.magnitude(O) - sphere.radius * sphere.radius
     local M = B * B - 4 * A * C
-    if ray.p.x == 0 and ray.p.y == 0 then
-        print({A=A, B=B, C=C, M=M, sM=math.sqrt(M)})
-    end
-    if M < 0 then return {hits = 0, point = nil}
+    if M < 0 then
+        return {hits = 0, point = nil, normal = nil}
     elseif close_to(M, 0) then
         local t = - B / (2 * A)
-        return {hits = 1, point = Ray.at(ray, t)}
+        local p = Ray.at(ray, t)
+        local n = Vector.normalize(Vector.sub(p, sphere.center))
+        return {hits = 1, point = p, normal = n}
     else
-        -- the minus path is always less
+        -- "The minus path is always less", quoth the Miser
         local t = (-B - math.sqrt(M)) / (2 * A)
-        if ray.p.x == 0 and ray.p.y == 0 then
-            print({t = t, ray = ray})
-        end
-        return {hits = 2, point = Ray.at(ray, t)}
+        local p = Ray.at(ray, t)
+        local n = Vector.normalize(Vector.sub(p, sphere.center))
+        return {hits = 2, point = p, normal = n}
     end
-    return point
 end
 Sphere.spherical_coords = function(point)
     local coords = {theta = 0, phi = 0}
@@ -159,18 +158,18 @@ Sphere.spherical_coords = function(point)
     return coords
 end
 Sphere.hit = function(sphere, ray)
-    local point = Sphere.intersection_point(sphere, ray)
+    local hit = Sphere.intersection_point(sphere, ray)
     -- local coords = Sphere.spherical_coords(point)
     -- TODO:: actual mapping
     local coords = {theta = 0.0, phi = 0.0}
     -- TODO:: Have to use the colon self syntax instead of color
     local color = Color.at(sphere.texture,
                            coords.theta, coords.phi)
-    point['color'] = color
-    return point
+    hit['color'] = color
+    return hit
 end
 
-local pixels = {width = 1, height = 1, units="dimensionless"}
+local pixels = {width = 0.5, height = 0.5, units="dimensionless"}
 
 -- image format required for drimg header
 local image_desc = {
@@ -190,8 +189,49 @@ print({width = background.image:width(),
        min = background.image:min(),
        max = background.image:max()})
 
+local LightSource = {}
+LightSource.make = function(point, intensity, color)
+    local ls = {}
+    ls.point = point
+    ls.intensity = intensity
+    ls.color = color
+    return ls
+end
+
 local scene = {}
-scene.objects = {Sphere.make(Point.make(0, 0, 2), 20, yellow)}
+scene.objects = {Sphere.make(Point.make(0, 0, 50), 40, yellow)}
+scene.light_source = LightSource.make(Point.make(-200, -100, -100), 100, white)
+scene.ambient_light_intensity = 0.25
+-- TODO:: shininess should be attached to the objects
+scene.shininess = 32
+
+local Shader = {}
+Shader.phong = function(scene, ray, hit)
+    local Lp = scene.light_source.point
+    local Ip = scene.light_source.intensity
+    local Ia = scene.ambient_light_intensity
+    local p = hit.point
+    local n = hit.normal
+    local c = hit.color
+    -- I = ambient + diffuse + specular
+
+    local light_dir = Vector.normalize(Vector.sub(Lp, p))
+    local lambertian = math.max(Vector.dot(light_dir, n), 0)
+    local specular = 0
+    if lambertian > 0 then
+        local half_dir = Vector.normalize(Vector.add(Vector.sub(Vector.make(0,0,0), ray.u), light_dir))
+        local spec_angle = math.max(Vector.dot(half_dir, n), 0)
+        specular = math.pow(spec_angle, scene.shininess)
+    end
+    local cv = Vector.make(c.r, c.g, c.b)
+    local Ac = Vector.scale(cv, Ia)
+    local Dc = Vector.scale(cv, lambertian)
+    local Sc = Vector.scale(cv, specular)
+    local rv = Vector.add(Ac, Vector.add(Dc, Sc))
+    rv = Vector.make(math.min(rv.x, 255), math.min(rv.y, 255), math.min(rv.z, 255))
+    return Color.make(math.floor(rv.x), math.floor(rv.y), math.floor(rv.z))
+end
+
 
 -- Set up the POV
 -- Coordinates centered around the viewer
@@ -229,9 +269,9 @@ local viewing_distance = (image:height() / 2) * pixels.height
 -- The background doesn't get intersected like a normal object, the number is
 -- just used to scale the width
 local round_to_index = function(x, n)
-    return math.floor(math.fmod(x, n) + (n)) + 1
+    return math.floor(x % n) + 1
 end
-background.infinite = 100
+background.infinite = 200
 background.origin = {x=0, y=0, z=background.infinite}
 background.hit = function (bg, ray)
     -- at what x,y does ray.z intersect with background.infinite
@@ -239,8 +279,8 @@ background.hit = function (bg, ray)
     local t = (bg.origin.z - ray.p.z) / ray.u.z
     local i = Ray.at(ray, t)
     -- get the color at that point
-    local x = round_to_index(i.x, bg.width / 2)
-    local y = round_to_index(i.y, bg.height / 2)
+    local x = round_to_index(i.x, bg.width)
+    local y = round_to_index(i.y, bg.height)
     return bg.array[y][x]
 end
 
@@ -254,19 +294,13 @@ for p in image:each() do
     for i, object in ipairs(scene.objects) do
         -- TODO:: what you want more than spheres?
         hit = Sphere.hit(object, ray)
-        print({hit = hit})
     end
     if hit.point == nil then
         local c = background.hit(background, ray)
         p:rgb(c.r, c.g, c.b)
     else
-        -- TODO:: Actual shading calculation, where is the light!?
-        local actual_color = hit.color
-        print({HIT=actual_color})
+        local actual_color = Shader.phong(scene, ray, hit)
         p:rgb(actual_color.r, actual_color.g, actual_color.b)
     end
-
-    -- print({x = x, y = y, P = P, V = V})
-    -- p:rgb(0, 0, 255)
 end
 image:write_png(assert(io.open("test.png", "wb"))):close()
