@@ -200,7 +200,7 @@ end
 
 local scene = {}
 scene.objects = {Sphere.make(Point.make(0, 0, 50), 40, yellow)}
-scene.light_source = LightSource.make(Point.make(-200, -100, -100), 100, white)
+scene.light_source = LightSource.make(Point.make(-100, -100, -100), 100, white)
 scene.ambient_light_intensity = 0.25
 -- TODO:: shininess should be attached to the objects
 scene.shininess = 32
