@@ -74,3 +74,12 @@ function make_power_func(value_type, n)
 end
 terra_power8 = make_power_func(double, 8)
 
+terra bens_function(x : int, y: int)
+    return y * [make_power_func(int, 10)](x)
+end
+print("Pretty printing the staged function")
+bens_function:printpretty()
+print("Printing the dissassembly")
+bens_function:disas()
+
+

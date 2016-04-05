@@ -173,8 +173,8 @@ local pixels = {width = 0.5, height = 0.5, units="dimensionless"}
 
 -- image format required for drimg header
 local image_desc = {
-    width = 640;
-    height = 480;
+    width = 800;
+    height = 800;
     channels = 3;
     min = 0;
     max = 255;
@@ -199,7 +199,7 @@ LightSource.make = function(point, intensity, color)
 end
 
 local scene = {}
-scene.objects = {Sphere.make(Point.make(0, 0, 50), 40, yellow)}
+scene.objects = {Sphere.make(Point.make(0, 30, 50), 40, yellow)}
 scene.light_source = LightSource.make(Point.make(-100, -100, -100), 100, white)
 scene.ambient_light_intensity = 0.25
 -- TODO:: shininess should be attached to the objects
