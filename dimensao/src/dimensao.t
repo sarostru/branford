@@ -118,8 +118,59 @@ local function some_math(x)
     return (x + 2) * 3 - 2
 end
 
+-- I need to:
+-- 1. Upcast constants into dimensional things
+-- 2. Store the AST
+-- 3. Store the position(s) in the AST of the arguments
+-- 4. Provide 2 evaulation modes of the AST
+--  a) Verify that everything typechecks using dimensional analysis
+--  b) Generate the raw terra code
+
+-- Let's start with only the plus operator and only numbers
+
+local Number = "Number"
+
+function join(...)
+    if #arg == 0 then
+        return ""
+    end
+
+    local s = arg[1]
+    for i = 2, #arg do
+        s = s .. " -> " .. arg[i]
+    end
+    return s
+end
+
+local AdditionOperators = {}
+AdditionOperators[join(Number, Number)] = function (x, y) return x + y end
+
 
 local inspect = require "inspect"
+local ASTNode = {}
+ASTNode.__add = function(x, y)
+        print(inspect(AdditionOperators))
+        local f = AdditionOperators[join(x.Type, y.Type)]
+        print(inspect(f))
+        
+        return f(x.value, y.value)
+    end
+
+function make_number(value)
+    local T = {Type=Number, value=value}
+    setmetatable(T, ASTNode)
+    return T
+end
+
+local x = make_number(10)
+local y = make_number(8)
+print("x = ", x.value, ", type = ", inspect(x.Type))
+print("y = ", y.value, ", type = ", inspect(y.Type))
+print("x + y = ", x + y)
+
+
+
+
 print(inspect(Scalar))
 print(some_math(Scalar))
 -- print(some_math(Scalar))
