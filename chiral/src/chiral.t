@@ -97,8 +97,6 @@ local function add_chiral(x, y)
     local terra add(x : terralib.typeof(x), y : terralib.typeof(y))
         return add_chiral_macro(x, y)
     end
-    print(add:printpretty())
-    print(add:disas())
     return add(x, y)
 end
 
