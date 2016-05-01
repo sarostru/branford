@@ -1,8 +1,9 @@
 -- Trying something simpler
--- I think if I use structs like tags, I could
--- identify those during a macro pass and strip out the 
--- struct and replace it with the underlying datatype.
+-- Wrapping up doubles with some additional chirality information
 
+print("----------------------------------")
+print("Manual Chirality with structs")
+print("----------------------------------")
 
 -- Left and Right Doubles are totally different, you can't
 -- possibly add them to each other
@@ -48,6 +49,9 @@ assert(not success)
 print(error_msg)
 
 -- This is pretty good, but could we make the chirality a parameter instead?
+print("----------------------------------")
+print("Parameterized Chirality with Macros")
+print("----------------------------------")
 
 -- Attempt #1
 -- Make it a struct parameter, seemed plausible but this is
@@ -56,11 +60,12 @@ print(error_msg)
 -- This doesn't work, we need the value of the chirality earlier
 
 -- Attempt #2
--- Add additional information directly into the struct table
+-- Create a different unique struct for each chirality programmatically
+-- Use a macro instead of a terra function to make sure the chiralities match
 local ChiralityTypes = {"left", "right", "up", "down"}
 local Chirality = {}
 for i, v in ipairs(ChiralityTypes) do
-    t = terralib.types.newstruct("Chiral[" .. v .. "]")
+    t = terralib.types.newstruct("Chirality." .. v)
     t.entries = {{field="x", type=double}}
     Chirality[v] = t
 end
@@ -92,6 +97,8 @@ local function add_chiral(x, y)
     local terra add(x : terralib.typeof(x), y : terralib.typeof(y))
         return add_chiral_macro(x, y)
     end
+    print(add:printpretty())
+    print(add:disas())
     return add(x, y)
 end
 
@@ -109,3 +116,16 @@ print_chiral(add_chiral(d, d))
 success, error_msg = pcall(function () print_chiral(add_chiral(d, u)) end)
 assert(not success)
 print(error_msg)
+
+-- Taking a look at the function and the disassembly
+local terra add_up(x : terralib.typeof(u), y : terralib.typeof(u))
+    return add_chiral_macro(x, y)
+end
+print("----------------------------------")
+print("Pretty Print of Generated Terra")
+print("----------------------------------")
+print(add_up:printpretty())
+print("----------------------------------")
+print("Disassembly of Generated Terra")
+print("----------------------------------")
+print(add_up:disas())
