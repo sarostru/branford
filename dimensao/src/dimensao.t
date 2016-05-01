@@ -54,45 +54,49 @@ print(error_msg)
 -- quite wrong since it's value will not be available at compile time
 -- e.g. struct ChiralDouble {chirality : int, x : double}
 -- This doesn't work, we need the value of the chirality earlier
+
 -- Attempt #2
 -- Add additional information directly into the struct table
-struct ChiralDouble {x : double}
-local Chirality = {left=ChiralDouble,
-                   right=ChiralDouble,
-                   up=ChiralDouble,
-                   down=ChiralDouble}
-for i, v in ipairs(chirality) do
-    v.chirality = i
+local ChiralityTypes = {"left", "right", "up", "down"}
+local Chirality = {}
+for i, v in ipairs(ChiralityTypes) do
+    t = terralib.types.newstruct("Chiral[" .. v .. "]")
+    t.entries = {{field="x", type=double}}
+    Chirality[v] = t
 end
 
-terra make_up (x : double)
-    return [Chirality.up]({x=x})
-end
-
-terra make_down (x : double)
-    return [Chirality.down]({x=x})
+local function make_chiral(chiral_type, x)
+    local terra make (x : double)
+        return chiral_type({x=x})
+    end
+    return make(x)
 end
 
 local add_chiral_macro = macro(function(x, y)
-    print(type(x))
-    print(x)
-    print(type(y))
-    print(y)
-    return `ChiralDouble({x=x.x + y.x})
+    local xt = x:gettype()
+    local yt = y:gettype()
+    assert(xt == yt, string.format("Error: chiral mismatch between %s and %s", xt, yt))
+    return `xt({x=x.x + y.x})
 end)
 
+-- N.B. We can't make one add_chiral terra function, since macros evaluate at 
+-- compile time, a function like this cannot have enough information to do the
+-- macro checks.  Instead we must only provide a macro
+-- terra add_chiral(x : ChiralDouble, y : ChiralDouble)
+--     return add_chiral_macro(x, y)
+-- end
 
-terra add_chiral(x : ChiralDouble, y : ChiralDouble)
-    return add_chiral_macro(x, y)
+-- Since we can't have the one function, for convenience in this testing we can
+-- wrap calling the macro in a lua function
+local function add_chiral(x, y)
+    local terra add(x : terralib.typeof(x), y : terralib.typeof(y))
+        return add_chiral_macro(x, y)
+    end
+    return add(x, y)
 end
 
-local T = {}
-for i, v in ipairs(Chirality) do
-    T[i] = make_add_chiral(v)
-end
-
-u = make_up(7)
-d = make_down(4)
+u = make_chiral(Chirality.up, 7)
+d = make_chiral(Chirality.down, 4)
 
 print_chiral(u)
 print_chiral(d)
@@ -102,7 +106,8 @@ print_chiral(add_chiral(u, u))
 -- Can add down to down
 print_chiral(add_chiral(d, d))
 -- Can't add up to down
-print_chiral(add_chiral(d, u))
-
+success, error_msg = pcall(function () print_chiral(add_chiral(d, u)) end)
+assert(not success)
+print(error_msg)
 
 
