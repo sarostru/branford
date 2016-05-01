@@ -1,178 +1,50 @@
--- DQ geometry = {AffineSpace, VectorSpace}
--- DQ units = {Units}
--- DQ datatype = {datatype}
-
-local Constants = {
-    Geometry = {
-        AffineSpace = "AffineSpace",
-        VectorSpace = "VectorSpace"
-    },
-    Units = {
-        Dimensionless = "",
-        Length = "Length",
-        Time = "Time",
-        Mass = "Mass",  
-        Color = "Color"
-    }
-}
+-- Trying something simpler
+-- I think if I use structs like tags, I could
+-- identify those during a macro pass and strip out the 
+-- struct and replace it with the underlying datatype.
 
 
-local function newFunction(self, f, arity) 
-    if arity == 1 then
-        return function () return f(self) end
-    elseif arity == 2 then
-        return function (x) return f(self, x) end
-    else
-        print("Error: Invalid function arity", f)
-    end
-    return nil
+-- Left and Right Doubles are totally different, you can't
+-- possibly add them to each other
+struct LeftDouble  {x : double}
+struct RightDouble {x : double}
+
+
+terra make_left (x : double)
+    return LeftDouble({x=x})
 end
 
 
-local function newVTable (self, functions)
-    local self = self
-    local vtable = {}
-    for k, f in ipairs(functions) do
-        vtable[k] = newFunction(self, f.func, f.arity)
-    end
-    return vtable
+terra make_right (x : double)
+    return RightDouble({x=x})
 end
 
-local InputFunctions = {
-    toDQ={arity=1, func=function(x) return "Type Here?"end}
-}
 
-local BinaryFunctions = {
-    add={arity=2, func=function(x, y) return `x + y end}, 
-    sub={arity=2, func=function(x, y) return `x - y end}, 
-    mul={arity=2, func=function(x, y) return `x * y end}
-}
-
-
--- local ScalarFunctions = {
---     -- binary ops
---     add, sub, mul, div, pow, close_to,
---     -- unary ops
---     sqrt, negate, recip,
---     -- conversion
---     to_vec
--- }
--- 
--- local VectorDQ = {
---     -- elementwise, binary ops
---     add, sub, mul, div, pow, close_to,
---     -- elementwise unary ops
---     sqrt, negate, recip,
---     -- vector math ops
---     dot, sum,
---     -- getitem, extract element to Scalar
---     get,
---     -- setitem, assign Scalar to element
---     set,
---     -- utility ops composed of the others
---     normalize
--- }
-
-
-local DQTable = {
-    -- TODO:: These need to actual implementations
-    --        each one should be wrapped in a argument
-    --        handler function, then instead of + 
-    --        it has to do the dimension checks
-    __add = function (x, y) 
-        print("DQ.add(", x, y, ")")
-        -- TODO:: Temporarily inserting 5 here
-        return 5 + y
-    end,
-    __sub = function (x, y)
-        print("DQ.sub(", x, y, ")")
-        return x - y
-    end,
-    __mul = function (x, y)
-        print("DQ.mul(", x, y, ")")
-        return x * y
-    end    
-}
-
-
-local function newDimensionalQuantity (geometry, units, functions , datatype)
-    local self = {geometry=geometry,
-                  units=units,
-                  datatype=datatype}
-    local functions = functions 
-    local vtable = newVTable(self, functions)
-    setmetatable(vtable, DQTable)
-
-    return vtable
+terra add_left (x : LeftDouble, y : LeftDouble)
+    return LeftDouble({x=x.x + y.x})
 end
 
-local DQ = newDimensionalQuantity
 
-local Scalar = DQ(Constants.Geometry.AffineSpace,
-                  Constants.Units.Dimensionless,
-                  BinaryFunctions,
-                  double)
-
-
-local function some_math(x) 
-    return (x + 2) * 3 - 2
+terra add_right (x : RightDouble, y : RightDouble)
+    return RightDouble({x=x.x + y.x})
 end
 
--- I need to:
--- 1. Upcast constants into dimensional things
--- 2. Store the AST
--- 3. Store the position(s) in the AST of the arguments
--- 4. Provide 2 evaulation modes of the AST
---  a) Verify that everything typechecks using dimensional analysis
---  b) Generate the raw terra code
 
--- Let's start with only the plus operator and only numbers
-
-local Number = "Number"
-
-function join(...)
-    if #arg == 0 then
-        return ""
-    end
-
-    local s = arg[1]
-    for i = 2, #arg do
-        s = s .. " -> " .. arg[i]
-    end
-    return s
+function print_chiral(x)
+    print(string.format("{type : %s, value : %s}", terralib.typeof(x), x.x))
 end
 
-local AdditionOperators = {}
-AdditionOperators[join(Number, Number)] = function (x, y) return x + y end
+print_chiral(make_left(2))
+print_chiral(make_right(2))
 
+l = make_left(5) 
+r = make_right(6)
 
-local inspect = require "inspect"
-local ASTNode = {}
-ASTNode.__add = function(x, y)
-        print(inspect(AdditionOperators))
-        local f = AdditionOperators[join(x.Type, y.Type)]
-        print(inspect(f))
-        
-        return f(x.value, y.value)
-    end
+-- Can add left and left doubles
+print_chiral(add_left(l, l))
+-- Can't add left and right doubles
+success, error_msg = pcall(function () add_right(l, r) end)
+assert(not success)
+print(error_msg)
 
-function make_number(value)
-    local T = {Type=Number, value=value}
-    setmetatable(T, ASTNode)
-    return T
-end
-
-local x = make_number(10)
-local y = make_number(8)
-print("x = ", x.value, ", type = ", inspect(x.Type))
-print("y = ", y.value, ", type = ", inspect(y.Type))
-print("x + y = ", x + y)
-
-
-
-
-print(inspect(Scalar))
-print(some_math(Scalar))
--- print(some_math(Scalar))
--- print(some_math(Scalar))
--- print(some_math(Scalar))
+-- This is pretty good, but could we make the chirality a parameter instead?
