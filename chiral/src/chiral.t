@@ -109,5 +109,3 @@ print_chiral(add_chiral(d, d))
 success, error_msg = pcall(function () print_chiral(add_chiral(d, u)) end)
 assert(not success)
 print(error_msg)
-
-
