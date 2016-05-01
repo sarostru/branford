@@ -52,16 +52,25 @@ print(error_msg)
 -- Attempt #1
 -- Make it a struct parameter, seemed plausible but this is
 -- quite wrong since it's value will not be available at compile time
-local Chirality = {left=0, right=1, up=2, down=3}
-
-struct ChiralDouble {chirality : int, x : double}
+-- e.g. struct ChiralDouble {chirality : int, x : double}
+-- This doesn't work, we need the value of the chirality earlier
+-- Attempt #2
+-- Add additional information directly into the struct table
+struct ChiralDouble {x : double}
+local Chirality = {left=ChiralDouble,
+                   right=ChiralDouble,
+                   up=ChiralDouble,
+                   down=ChiralDouble}
+for i, v in ipairs(chirality) do
+    v.chirality = i
+end
 
 terra make_up (x : double)
-    return ChiralDouble({chirality=[Chirality.up], x=x})
+    return [Chirality.up]({x=x})
 end
 
 terra make_down (x : double)
-    return ChiralDouble({chirality=[Chirality.down], x=x})
+    return [Chirality.down]({x=x})
 end
 
 local add_chiral_macro = macro(function(x, y)
@@ -69,12 +78,17 @@ local add_chiral_macro = macro(function(x, y)
     print(x)
     print(type(y))
     print(y)
-    return `ChiralDouble({chirality=x.chirality, x=x.x + y.x})
+    return `ChiralDouble({x=x.x + y.x})
 end)
 
--- This is when the macro gets evaluated, making the chirality a struct member means this doesn't work, since it is now not available at this point
+
 terra add_chiral(x : ChiralDouble, y : ChiralDouble)
     return add_chiral_macro(x, y)
+end
+
+local T = {}
+for i, v in ipairs(Chirality) do
+    T[i] = make_add_chiral(v)
 end
 
 u = make_up(7)
