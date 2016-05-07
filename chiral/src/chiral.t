@@ -56,7 +56,7 @@ print("----------------------------------")
 -- Attempt #1
 -- Make it a struct parameter, seemed plausible but this is
 -- quite wrong since it's value will not be available at compile time
--- e.g. struct ChiralDouble {chirality : int, x : double}
+-- struct ChiralDouble {chirality : int, x : double}
 -- This doesn't work, we need the value of the chirality earlier
 
 -- Attempt #2
