@@ -5,25 +5,6 @@
 -- I.e. With structs I can make different types with the same structure, can I do that for double
 -- flipping order of inputs to a function?
 
-
--- Vector
-local mul_vector_macro = macro(function(s, v)
-    local vt = a:gettype()
-    local bt = b:gettype()
-    assert(at == bt, string.format("Error: Can only add scalar to scaler.  Got %s and %s", at, bt))
-    return `at({x=s * v.x, y = s * v.y, z = s * v.z})
-end)
-
-local function make_vector_type(ScalarType, Size)
-    local t = terralib.types.newstruct("Vector[" .. ValueType.type .. ", " .. Size .. "]")
-    t.entries = {{"x", ScalarType}, {"y", ScalarType}, {"z", ScalarType}}
-    t.metamethods.__add = add_vector_macro
-    t.metamethods.__sub = sub_vector_macro
-    t.metamethods.__mul = mul_vector_macro
-    t.metamethods.__div = div_vector_macro
-end
-
-
 -- Scalar
 local add_scalar_macro = macro(function(a, b)
     local at = a:gettype()
@@ -51,6 +32,23 @@ local function make_scalar_type(ValueType)
     return t
 end
 
+
+-- Vector
+local mul_vector_macro = macro(function(s, v)
+    local vt = a:gettype()
+    local bt = b:gettype()
+    assert(at == bt, string.format("Error: Can only add scalar to scaler.  Got %s and %s", at, bt))
+    return `at({x=s * v.x, y = s * v.y, z = s * v.z})
+end)
+
+local function make_vector_type(ScalarType, Size)
+    local t = terralib.types.newstruct("Vector[" .. ValueType.type .. ", " .. Size .. "]")
+    t.entries = {{"x", ScalarType}, {"y", ScalarType}, {"z", ScalarType}}
+    t.metamethods.__add = add_vector_macro
+    t.metamethods.__sub = sub_vector_macro
+    t.metamethods.__mul = mul_vector_macro
+    t.metamethods.__div = div_vector_macro
+end
 
 
 function Scalar(ValueType)
