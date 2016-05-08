@@ -1,3 +1,11 @@
+-- To try next
+-- Combining with dimensional analysis
+-- Using array instead of xyz and then using entrymissing
+-- Can I make new versions of primitive types?
+-- I.e. With structs I can make different types with the same structure, can I do that for double
+-- flipping order of inputs to a function?
+
+
 -- Vector
 local mul_vector_macro = macro(function(s, v)
     local vt = a:gettype()
